@@ -1,0 +1,988 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Switch Security</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/night.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+
+    <style>
+      .comment { color: #bbb; font-size: 22pt !important; }
+      .fixed { color: purple; font-size: 13pt !important; }
+      table, td, th { border: 3px solid #333 !important; border-collapse: collapse !important; }
+      .main_cpu { border-color: #FFA500 !important; border-collapse: separate !important; }
+      .chip { display: inline; border-color: #D8BFD8 !important; border-collapse: separate !important; }
+      .chip td { border-width: 0 !important; }
+      .chip tr { border-width: 0 !important; }
+    </style>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+	<section>
+          <h2>Switch Security</h2>
+          <p>Homebrew on the Horizon</p>
+          <span class="comment"><a href="https://twitter.com/qlutoo">@qlutoo</a>, <a href="https://twitter.com/derrekr6">@derrekr6, <a href="https://twitter.com/naehrwert">@naehrwert</a></span>
+        </section>
+
+	<section>
+          <h3>Hardware - Main Unit</h3>
+          <img style="border: 0px; background-color: transparent; float: right;" src="img/switch.png" />
+	  <p class="fragment fade-in comment">4x ARM Cortex-A57 @1GHz</p>
+	  <p class="fragment fade-in comment">Maxwell GPU @384MHz/768Mhz</p>
+	  <p class="fragment fade-in comment">4 GB DRAM</p>
+        </section>
+
+	<section>
+          <h3>Hardware - Joy Cons</h3>
+          <img style="border: 0px; background-color: transparent; float: right;" src="img/joycons.png" />
+	  <p class="fragment fade-in comment">Accel/Gyro/NFC/IR</p>
+	  <p class="fragment fade-in comment">"HD Rumble"</p>
+	  <p class="fragment fade-in comment">No security at all</p>
+        </section>
+
+	<section>
+          <img src="img/mobo.png" />
+        </section>
+
+	<section data-background-image="img/emmc.png">
+        </section>
+
+	<section data-background-image="img/soc_bg_dark.jpg">
+          <h3 class="fragment fade-in">NVIDIA "ODNX02-A2"</h3>
+	  <p class="fragment fade-in comment">Off-the-shelf Tegra X1</p>
+	  <p class="fragment fade-in comment">3000+ page Reference Manual available online</p>
+	  <p class="fragment fade-in comment">LinuxForTegra - Linux drivers</p>
+        </section>
+
+	<section>
+          <table class="chip">
+            <tr><td>
+                DRAM
+                <span class="comment">2x 2GB</span>
+            </td></tr>
+          </table>
+          <table class="chip">
+            <tr><td>
+                NAND
+                <span class="comment">32GB</span>
+            </td></tr>
+          </table>
+          <table class="chip">
+            <tr><td>
+                BCM4356
+                <span class="comment">Wifi</span>
+            </td></tr>
+          </table>
+          <font color="#FFA500">Main SoC</font>
+          <table class="main_cpu">
+            <tr>
+              <td colspan="2">
+                ARM7 <span class="comment">(boot cpu)</span>
+                <br />
+                <span class="comment">IRAM 256kB</span>
+                <br />
+                <span class="comment">BootROM 96kB</span>
+              </td>
+              <td colspan="4">
+                ARMv8 Cortex-A57 <span class="comment">(4x)</span>
+                <br />
+                <span class="comment">TZRAM 64kB</span>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="6">
+                GPU Maxwell GM20B
+              </td>
+            </tr>
+            <tr>
+              <td>
+                SE
+                <span class="comment">AES/RSA acceleration</span>
+              </td>
+              <td>FUSE</td>
+              <td>MC</td>
+              <td>TSEC</td>
+              <td colspan="2">
+                ARMv7 Cortex-A9
+                <span class="comment">Audio DSP</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                UART GPIO
+              </td>
+              <td>
+                PCIe
+              </td>
+              <td>
+                USB
+              </td>
+              <td>
+                eMMC
+              </td>
+              <td>
+                HDMI
+              </td>
+              <td>
+                I2C SPI
+              </td>
+            </tr>
+          </table>
+        </section>
+
+	<section>
+          <h3>Fuses</h3>
+
+          <ul>
+	    <p><span class="fragment fade-in">Downgrade protection <span class="comment">32 bits</span></span></p>
+	    <p><span class="fragment fade-in">SBK (Secure Boot Key) <span class="comment">128 bits</span></span></p>
+	    <p><span class="fragment fade-in">SHA256 of RSA Public key <span class="comment">256 bits</span></span></p>
+	    <p><span class="fragment fade-in">Bootrom patch data <span class="comment">320 bytes</span></span></p>
+          </ul>
+        </section>
+
+	<section>
+          <img style="border: 0px; background-color: transparent; float: right;"  src="img/jetson.png" />
+          <p class="fragment fade-in">Jetson TX1 Devkit <span class="comment">$700</span></p>
+        </section>
+
+	<section>
+          <h3>Switch Software</h3>
+
+          <ul>
+	    <p><span class="fragment fade-in">Does it run FreeBSD? <span class="comment">No.</span></span> <span class="fragment fade-in comment">Stop asking.</span></p>
+	    <p class="fragment fade-in">Custom microkernel "Horizon" 💖</p>
+	    <p class="fragment fade-in">All drivers in userspace <span class="comment">"Services"</span></p>
+	    <p class="fragment fade-in">NVIDIA graphics driver <span class="comment">Custom NVN API</span></p>
+          </ul>
+        </section>
+
+	<section>
+          <h3>3DS Comparison</h3>
+
+          <ul>
+	    <p class="fragment fade-in">All userland processes have <font color="yellow">ASLR</font>!</p>
+	    <p class="fragment fade-in"><span class="comment">Save game exploits much much harder</span></p>
+	    <p class="fragment fade-in">Everything was rewritten and renamed</p>
+	    <p class="fragment fade-in"><span class="comment">exheader→npdm, tmd→cmnt, apt→am, etc..</span></p>
+            <p class="fragment fade-in">No "arm9"</p>
+	    <p class="fragment fade-in"><span class="comment">No complicated security processor without memory protection</span></p>
+          </ul>
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>Security model</h3>
+
+          <table>
+            <tr>
+              <td class="fragment fade-in" colspan="6"><font color="#ff0000">TrustZone</font> <span class="comment">crypto</span></td>
+            </tr>
+            <tr>
+              <td class="fragment fade-in" colspan="6"><font color="#ff6100">Kernel</font> <span class="comment">process isolation, IOMMU</span></td>
+            </tr>
+            <tr class="fragment fade-in">
+              <td><font color="#ffae00">fs</font></td>
+              <td><font color="#ffae00">ncm</font></td>
+              <td><font color="#ffae00">sm</font></td>
+              <td><font color="#ffae00">pm</font></td>
+              <td><font color="#ffae00">ldr</font></td>
+              <td><font color="#ffae00">spl</font></td>
+            </tr>
+            <tr>
+              <td class="fragment fade-in" colspan="6"><font color="#ffdd00">Microservices <span class="comment">least privilege</span></font></td>
+            </tr>
+            <tr>
+              <td class="fragment fade-in" colspan="6"><font color="#00ff00">Game/Application <span class="comment">untrusted</span></font></td>
+            </tr>
+          </table>
+        </section>
+
+        <section>
+          <h4><font color="#00ff00">Application</font> sandbox <span class="comment">(games)</span></h4>
+
+          <ul>
+	    <p class="fragment fade-in">Syscall filtering <span class="comment">~45 out of ~103 in total</span></p>
+            <p class="fragment fade-in">Service whitelist <span class="comment">~40 'user' services</span></p>
+	    <p class="fragment fade-in">Per-process "filesystems"</p>
+            <p class="fragment fade-in"><span class="comment">Only access own savegame, gamedata</span></p>
+            <p class="fragment fade-in"><span class="comment">Can't mount sdcard</span></p>
+          </ul>
+        </section>
+
+        <section>
+          <h4><font color="#ffdd00">Service</font> sandbox <span class="comment">(drivers)</span></h4>
+
+          <ul>
+	    <p class="fragment fade-in">Syscall filtering <span class="comment">~65 out of ~103 in total</span></p>
+            <p class="fragment fade-in">Service whitelist</p>
+            <p class="fragment fade-in">No file access at all*</p>
+	    <p class="fragment fade-in">Sometimes MMIO mapped</p>
+            <p class="fragment fade-in"><span class="comment">But, kernel maintains IOMMU for <b>all</b> bus masters</span></p>
+          </ul>
+        </section>
+
+        <section>
+          <h4><font color="#ffae00">Base service</font> sandbox <span class="comment">(fs+ldr+pm+sm+spl)</span></h4>
+
+          <ul>
+	    <p class="fragment fade-in">Bundled inside the kernel package</p>
+	    <p class="fragment fade-in">Syscall filtering <span class="comment">~65 out of ~103 in total</span></p>
+            <p class="fragment fade-in"><font color="yellow">No service whitelist</font></p>
+            <p class="fragment fade-in"><font color="yellow">No filesystem whitelist</font></p>
+          </ul>
+        </section>
+
+	<section>
+          <h3>Going places...</h3>
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>Security model</h3>
+
+          <table>
+            <tr>
+              <td colspan="6"><font color="#ff0000">TrustZone</font> <span class="comment">crypto</span></td>
+            </tr>
+            <tr>
+              <td colspan="6"><font color="#ff6100">Kernel</font> <span class="comment">process isolation, IOMMU</span></td>
+            </tr>
+            <tr>
+              <td><font color="#ffae00">fs</font></td>
+              <td><font color="#ffae00">ncm</font></td>
+              <td><font color="#ffae00">sm</font></td>
+              <td><font color="#ffae00">pm</font></td>
+              <td><font color="#ffae00">ldr</font></td>
+              <td><font color="#ffae00">spl</font></td>
+            </tr>
+            <tr>
+              <td colspan="6"><font color="#ffdd00">Microservices <span class="comment">least privilege</span></font></td>
+            </tr>
+            <tr>
+              <td colspan="6" style="background-color: #400"><font color="#00ff00">Game/Application <span class="comment">untrusted</span></font></td>
+            </tr>
+          </table>
+        </section>
+
+	<section>
+          <h3>WebKit <span class="fixed">[Fixed in 2.1.0, 3.0.0, 3.0.1, ...]</span></h3>
+
+          <ul>
+	    <p class="fragment fade-in">Used for eShop, manuals, EULAs, ...</p>
+            <p class="fragment fade-in"><span class="comment">Always over (https://) or local data (file:///)</span></p>
+            <p class="fragment fade-in">But 2.0.0 introduced WifiWebAuth:</p>
+            <p class="fragment fade-in"><span class="comment">Renders arbitrary HTML+JS from <font color="yellow">untrusted</font> wifi</span></p>
+            <p class="fragment fade-in">6-months old "Pegasus exploit"</p>
+            <p class="fragment fade-in"><span class="comment"><font color="yellow">Just works, lol</font></span></p>
+          </ul>
+        </section>
+
+	<section>
+          <h3>Symbolsssss</h3>
+          <code>
+            <font color="yellow">$ strings sdk.elf | grep _Z | c++filt</font>
+          </code>
+          <pre style="font-size: 11pt;">
+nn::svc::aarch64::lp64::ReplyAndReceiveLight(nn::svc::Handle)
+nn::svc::aarch64::lp64::SleepSystem()
+nn::svc::aarch64::lp64::StartProcess(nn::svc::Handle, int, int, unsigned long)
+nn::svc::aarch64::lp64::CreateProcess(nn::svc::Handle*, nn::svc::lp64::CreateProcessParameter const&, unsigned int const*, int)
+nn::svc::aarch64::lp64::GetProcessInfo(long*, nn::svc::Handle, nn::svc::ProcessInfoType)
+nn::svc::aarch64::lp64::ManageNamedPort(nn::svc::Handle*, char const*, int)
+nn::svc::aarch64::lp64::MapProcessMemory(unsigned long, nn::svc::Handle, unsigned long, unsigned long)
+nn::svc::aarch64::lp64::TerminateProcess(nn::svc::Handle)
+nn::svc::aarch64::lp64::CallSecureMonitor()
+nn::svc::aarch64::lp64::QueryProcessMemory(nn::svc::lp64::MemoryInfo*, nn::svc::PageInfo*, nn::svc::Handle, unsigned long)
+nn::svc::aarch64::lp64::UnmapProcessMemory(unsigned long, nn::svc::Handle, unsigned long, unsigned long)
+nn::svc::aarch64::lp64::CreateResourceLimit(nn::svc::Handle*)
+nn::svc::aarch64::lp64::MapProcessCodeMemory(nn::svc::Handle, unsigned long, unsigned long, unsigned long)
+nn::svc::aarch64::lp64::UnmapProcessCodeMemory(nn::svc::Handle, unsigned long, unsigned long, unsigned long)
+nn::svc::aarch64::lp64::SetProcessMemoryPermission(nn::svc::Handle, unsigned long, unsigned long, nn::svc::MemoryPermission)
+nn::svc::aarch64::lp64::SetResourceLimitLimitValue(nn::svc::Handle, nn::svc::LimitableResource, long)
+nn::crypto::detail::bigint_cmp(unsigned int const*, unsigned int const*, int)
+nn::crypto::detail::bigint_div(unsigned int*, unsigned int*, unsigned int const*, int, unsigned int const*, int)
+nn::crypto::detail::bigint_mod(unsigned int*, unsigned int const*, int, unsigned int const*, int)
+nn::crypto::detail::bigint_copy(unsigned int*, unsigned int const*, int)
+nn::crypto::detail::bigint_mult(unsigned int*, unsigned int const*, unsigned int const*, int)
+nn::crypto::detail::bigint_zero(unsigned int*, int)
+nn::crypto::detail::bigint_digits(unsigned int const*, int)
+nn::crypto::detail::bigint_iszero(unsigned int const*, int)
+nn::crypto::detail::bigint_add_mod(unsigned int*, unsigned int const*, unsigned int const*, unsigned int const*, int)
+nn::crypto::detail::bigint_mod_inv(unsigned int*, unsigned int const*, unsigned int const*, int)
+nn::crypto::detail::bigint_sub_mod(unsigned int*, unsigned int const*, unsigned int const*, unsigned int const*, int)
+nn::crypto::detail::bigint_mod_mult(unsigned int*, unsigned int const*, unsigned int const*, unsigned int const*, int)
+nn::crypto::detail::bigint_digit_mult(unsigned int*, unsigned int, unsigned int)
+nn::fs::EraseGameCard(nn::fs::GameCardSize, unsigned long)
+nn::fs::WriteToGameCard(long, void*, unsigned long)
+nn::fs::GetGameCardIdSet(nn::gc::GameCardIdSet*)
+nn::fs::GetGameCardHandle(unsigned int*)
+nn::fs::IsGameCardInserted()
+nn::fs::GetGameCardAsicInfo(nn::gc::RmaInformation*, void const*, unsigned long)
+nn::fs::GetGameCardAttribute(nn::fs::GameCardAttribute*, unsigned int)
+nn::fs::GetGameCardImageHash(void*, unsigned long, unsigned int)
+          </pre>
+        </section>
+
+	<section>
+          <h3>The PuyoPuyo trick <span class="fixed">[Unfixed]</span></h3>
+          <img src="img/puyo.jpg" />
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>Security model</h3>
+
+          <table>
+            <tr>
+              <td colspan="6"><font color="#ff0000">TrustZone</font> <span class="comment">crypto</span></td>
+            </tr>
+            <tr>
+              <td colspan="6"><font color="#ff6100">Kernel</font> <span class="comment">process isolation, IOMMU</span></td>
+            </tr>
+            <tr>
+              <td><font color="#ffae00">fs</font></td>
+              <td><font color="#ffae00">ncm</font></td>
+              <td><font color="#ffae00">sm</font></td>
+              <td><font color="#ffae00">pm</font></td>
+              <td><font color="#ffae00">ldr</font></td>
+              <td><font color="#ffae00">spl</font></td>
+            </tr>
+            <tr>
+              <td colspan="6"><font color="#ffdd00">Microservices <span class="comment">least privilege</span></font></td>
+            </tr>
+            <tr>
+              <td colspan="6" style="background-color: #040"><font color="#00ff00">Game/Application <span class="comment">untrusted</span></font></td>
+            </tr>
+          </table>
+        </section>
+
+	<section>
+          <h3>pl:u <span class="fixed">[Fixed in 3.0.0]</span></h3>
+          <ul>
+            <p class="fragment fade-in">User accessible service</p>
+            <p class="fragment fade-in">Cmds <code>1,2,3</code> take a single s32 input</p>
+            <p class="fragment fade-in comment">Big values ⟹ Crashes</p>
+            <p class="fragment fade-in">Array out-of-bounds read</p>
+            <p class="fragment fade-in comment">On the <i>.bss</i> segment, negative index allows dumping <i>.text</i></p>
+            <p class="fragment fade-in comment"><font color="yellow">NS service code dumped!</font></p>
+          </ul>
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>Security model</h3>
+
+          <table>
+            <tr>
+              <td colspan="6"><font color="#ff0000">TrustZone</font> <span class="comment">crypto</span></td>
+            </tr>
+            <tr>
+              <td colspan="6"><font color="#ff6100">Kernel</font> <span class="comment">process isolation, IOMMU</span></td>
+            </tr>
+            <tr>
+              <td><font color="#ffae00">fs</font></td>
+              <td><font color="#ffae00">ncm</font></td>
+              <td><font color="#ffae00">sm</font></td>
+              <td><font color="#ffae00">pm</font></td>
+              <td><font color="#ffae00">ldr</font></td>
+              <td><font color="#ffae00">spl</font></td>
+            </tr>
+            <tr>
+              <td colspan="5"><font color="#ffdd00">Microservices <span class="comment">least privilege</span></font></td>
+              <td style="background-color: #040"><font color="#ffdd00">ns</font></td>
+            </tr>
+            <tr>
+              <td colspan="6" style="background-color: #040"><font color="#00ff00">Game/Application <span class="comment">untrusted</span></font></td>
+            </tr>
+          </table>
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>Security model</h3>
+
+          <table>
+            <tr>
+              <td colspan="6"><font color="#ff0000">TrustZone</font> <span class="comment">crypto</span></td>
+            </tr>
+            <tr>
+              <td colspan="6"><font color="#ff6100">Kernel</font> <span class="comment">process isolation, IOMMU</span></td>
+            </tr>
+            <tr>
+              <td><font color="#ffae00">fs</font></td>
+              <td><font color="#ffae00">ncm</font></td>
+              <td style="background-color: #400"><font color="#ffae00">sm</font></td>
+              <td><font color="#ffae00">pm</font></td>
+              <td><font color="#ffae00">ldr</font></td>
+              <td><font color="#ffae00">spl</font></td>
+            </tr>
+            <tr>
+              <td colspan="5"><font color="#ffdd00">Microservices <span class="comment">least privilege</span></font></td>
+              <td style="background-color: #040"><font color="#ffdd00">ns</font></td>
+            </tr>
+            <tr>
+              <td colspan="6" style="background-color: #040"><font color="#00ff00">Game/Application <span class="comment">untrusted</span></font></td>
+            </tr>
+          </table>
+        </section>
+
+	<section>
+          <h3>smhax <span class="fixed">[Fixed in 3.0.1]</span></h3>
+
+          <p class="fragment fade-in">Services are fetched via SM:</p>
+          <pre><code class="hljs" data-trim contenteditable>svcConnectToNamedPort(&sm_handle, "sm:");
+smInitialize(sm_handle); // Send pid
+smGetService(sm_handle, &fs_handle, "fsp-srv");
+svcCloseHandle(sm_handle);</code></pre>
+          <p class="fragment fade-in">What if we skip smInitialize()?</p>
+          <p class="fragment fade-in"><span class="comment"><code>m_pid</code> will <font color="yellow">uninitialized</font> (it will be zero)</span></p>
+          <p class="fragment fade-in">SM thinks we are pid 0</p>
+          <p class="fragment fade-in"><span class="comment"><font color="yellow">Gets us access to all services, lol</font></span></p>
+        </section>
+        
+	<section data-transition="fade-in fade-out">
+          <h3>Security model</h3>
+
+          <table>
+            <tr>
+              <td colspan="6"><font color="#ff0000">TrustZone</font> <span class="comment">crypto</span></td>
+            </tr>
+            <tr>
+              <td colspan="6"><font color="#ff6100">Kernel</font> <span class="comment">process isolation, IOMMU</span></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td><font color="#ffae00">fs</font></td>
+              <td><font color="#ffae00">ncm</font></td>
+              <td><font color="#ffae00">sm</font></td>
+              <td><font color="#ffae00">pm</font></td>
+              <td><font color="#ffae00">ldr</font></td>
+              <td><font color="#ffae00">spl</font></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td colspan="5"><font color="#ffdd00">Microservices <span class="comment">least privilege</span></font></td>
+              <td style="background-color: #040"><font color="#ffdd00">ns</font></td>
+            </tr>
+            <tr>
+              <td colspan="6" style="background-color: #040"><font color="#00ff00">Game/Application <span class="comment">untrusted</span></font></td>
+            </tr>
+          </table>
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>How binaries are launched...</h3>
+
+          <table>
+            <tr>
+              <td>⟶ pm:shell <span class="comment">LaunchTitle</span></td>
+              <td>⟶ ldr:pm <span class="comment">CreateProcess</span></td>
+              <td>⟶ fsp-ldr
+                <span class="comment">MountCode</span>
+              </td>
+            </tr>
+          </table>
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>How binaries are launched...</h3>
+
+          <table>
+            <tr>
+              <td>⟶ pm:shell <span class="comment">LaunchTitle</span></td>
+              <td style="border-right-color: #FFA500 !important;">⟶ ldr:pm <span class="comment">CreateProcess</span></td>
+              <td style="border-color: #FFA500 !important;">⟶ fsp-ldr
+                <span class="comment">MountCode</span>
+              </td>
+            </tr>
+          </table>
+        </section>
+
+	<section>
+          <h3>Dumping binaries...</h3>
+
+          <ul>
+            <p class="fragment fade-in"><span class="comment">Trying to connect <code>fsp-ldr</code> gives error <code><font color="red">0x615</font></code></span></p>
+            <p class="fragment fade-in">Kernel enforces only one session at a time</p>
+            <p class="fragment fade-in"><span class="comment">If we crash Loader, maybe the session will be released...</span></p>
+            <p class="fragment fade-in"><code>ldr:ro</code> cmd 0</p>
+            <p class="fragment fade-in"><span class="comment"><font color="yellow">Crashes</font> when you give it a thread handle</span></p>
+          </ul>
+        </section>
+
+	<section>
+          <img src="img/code.jpg" />
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>Security model</h3>
+
+          <table>
+            <tr>
+              <td colspan="6"><font color="#ff0000">TrustZone</font> <span class="comment">crypto</span></td>
+            </tr>
+            <tr style="background-color: #400">
+              <td colspan="6"><font color="#ff6100">Kernel</font> <span class="comment">process isolation, IOMMU</span></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td><font color="#ffae00">fs</font></td>
+              <td><font color="#ffae00">ncm</font></td>
+              <td><font color="#ffae00">sm</font></td>
+              <td><font color="#ffae00">pm</font></td>
+              <td><font color="#ffae00">ldr</font></td>
+              <td><font color="#ffae00">spl</font></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td colspan="5"><font color="#ffdd00">Microservices <span class="comment">least privilege</span></font></td>
+              <td style="background-color: #040"><font color="#ffdd00">ns</font></td>
+            </tr>
+            <tr>
+              <td colspan="6" style="background-color: #040"><font color="#00ff00">Game/Application <span class="comment">untrusted</span></font></td>
+            </tr>
+          </table>
+        </section>
+
+        <section>
+	  <h3>Getting kernel</h3>
+	  <p class="fragment fade-in">Black-box testing is fun</p>
+	  <p class="fragment fade-in">...except that it isn't.</p>
+	  <ul>
+	    <li class="fragment fade-in">Switch uses a microkernel</li>
+	    <li class="fragment fade-in">ASLR in privileged services</li>
+	  </ul>
+	  <p class="fragment fade-in comment">Why not start at the other end?</p>
+	</section>
+
+	<section>
+	  <h3>Boot sequence</h3>
+	  <ul style="font-size: 35px">
+	    <p class="fragment fade-in">Publicly documented by NVIDIA</p>
+	    <p class="fragment fade-in">NVIDIA BootROM for ARM7 ("BPMP")</p>
+	    <p class="fragment fade-in comment">Not custom, except a few patches</p>
+	    <p class="fragment fade-in">BootROM loads BCT and 2nd stage loader from eMMC</p>
+	    <p class="fragment fade-in comment">Recovery mode is accessible, but requires N's private RSA key</p>
+	    <p class="fragment fade-in comment">Dumping the eMMC is pretty easy</p>
+	</section>
+	
+	<section>
+	  <img src="img/boot.svg"
+	       style="border: 0px; background-color: transparent;"
+	       width="100%" height="100%" />
+	</section>
+	
+	<section>
+	  <p align="center">
+	  <p>Keyblob key is only available to Pkg1Ldr</p>
+	  <p class="fragment fade-in"><font color="yellow">We need code execution in Pkg1Ldr</font></p>
+	  </p>
+	</section>
+	
+	<section>
+	  <h3>How to dump keys</h3>
+	  <br/>
+	  <br/>
+	  <p align="center">
+	  <p class="fragment fade-in">We glitched 3DS and got the keys.</p>
+	  <p class="fragment fade-in">We glitched WiiU and got the keys.</p>
+	  <p class="fragment fade-in"><i><font color="yellow">So, we glitch the Switch and get the keys...?</font></i></p>
+	  </p>
+	  <p class="fragment fade-in comment">How is Pkg1 verified?</p>
+	</section>
+
+	<section data-transition="fade-in fade-out">
+	  <h3>BCTs</h3>
+	  <img src="img/BCT.svg"
+	       style="border: 0px; background-color: transparent;"
+	       width="50%" height="50%" class="fragment" />
+	</section>
+	<section data-transition="fade-in fade-out">
+	  <h3>BCTs</h3>
+	  <img src="img/bct_hash.svg"
+	       style="border: 0px; background-color: transparent;"
+	       width="50%" height="50%" />
+	</section>
+	<section data-transition="fade-in fade-out">
+	  <h3>BCTs</h3>
+	  <img src="img/bct_hash_glitched.svg"
+	       style="border: 0px; background-color: transparent;"
+	       width="50%" height="50%" />
+	</section>
+	<section data-transition="fade-in fade-out">
+	  <h3>Timing</h3>
+	  <p align="center">
+	  <p class="fragment">Tracing the eMMC bus...</p>
+	  <pre class="fragment" style="font-size: 25px">t=0.047733s, diff 0.000026s, MMC_READ_SINGLE_BLOCK addr: 0x2600
+t=0.047838s, diff 0.000105s, MMC_SEND_STATUS
+t=0.049004s, <font color="yellow">diff 0.001166s</font>, MMC_GO_IDLE_STATE</pre>
+	  <p class="fragment">When BCT validation fails, the next one is read</p>
+	  <pre class="fragment" style="font-size: 25px">t=1.656546s, diff 0.000026s, MMC_READ_SINGLE_BLOCK addr: 0x2600
+t=1.656648s, diff 0.000102s, MMC_SEND_STATUS
+t=1.656700s, <font color="yellow">diff 0.000052s</font>, MMC_READ_SINGLE_BLOCK addr: 0x2800</pre>
+
+	  <p class="fragment">BootROM leaks time of check.</p>
+	  </p>
+	</section>
+	
+	<section data-background-image="img/setup1.jpg">
+	  <h3>Glitching setup</h3>
+	  <br/>
+	  <br/>
+	  <br/>
+	  <p class="fragment" style="font-size: 35px">Desoldered caps on ARM7's voltage rail</p>
+	  <p class="fragment" style="font-size: 35px">FPGA-driven MOSFETs to control power supply</p>
+	  <p class="fragment" style="font-size: 35px">Bit-bang'd eMMC CLK</p>
+	</section>
+	
+	<section>
+	  <p class="fragment">&#10003; All keys dumped</p>
+	  <p class="fragment">&#10003; Got all binaries</p>
+	  <br/>
+	  <br/>
+	  <br/>
+	</section>
+
+
+
+	<section data-transition="fade-in fade-out">
+          <h3>Kernel</h3>
+
+          <p class="fragment fade-in">Mapped at a fixed address</p>
+          <p class="fragment fade-in comment"><code>0xFFFFFFFFBFC00000: <span style="color: #228B22">R-X--X</span></code></p>
+          <p class="comment">&nbsp;</p>
+          <p class="">&nbsp;</p>
+          <p class="comment">&nbsp;</p>
+          <p class="">&nbsp;</p>
+          <p class="comment">&nbsp;</p>
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>Kernel</h3>
+
+          <p class="">Mapped at <font color="red">two</font> fixed addresses</p>
+          <p class="comment"><code>0xFFFFFFFFBFC00000: <span style="color: #228B22">R-X--X</span></code></p>
+          <p class="comment"><code>0xFFFFFFFE00000000: <span style="color: #f00">RW----</span></code></p>
+          <p class="fragment fade-in">All objects are allocated using SlabHeaps</p>
+          <p class="fragment fade-in comment">Use-after-frees more difficult to exploit</p>
+          <p class="fragment fade-in">Kernel cannot execute userland code</p>
+          <p class="fragment fade-in comment"><font color="yellow">Privileged Execute Never</font> bit</p>
+        </section>
+
+	<section>
+          <h3>Hmm <span class="fixed">[Fixed in 3.0.2]</span></h3>
+
+          <p class="fragment fade-in"><span class="comment"><code>0xFFFFFFFFBFC00000-0xFFFFFFFFBFC46000 R-X--<span class="fragment highlight-red">X</span></code></span></p>
+          <p class="fragment fade-in"><span class="comment">They accidentally <font color="yellow">mapped kernel executable in userspace</font>, lol</span></p>
+          <p class="fragment fade-in">Mostly useless</p>
+          <p class="fragment fade-in"><span class="comment">Can use gadgets from kernel in userspace</span></p>
+          <p class="fragment fade-in"><span class="comment">"ASLR bypass"</span></p>
+        </section>
+
+	<section>
+          <h3>SMMU <span class="comment">(IOMMU)</span></h3>
+
+          <ul>
+            <p class="fragment fade-in">NVIDIA design</p>
+            <p class="fragment fade-in"><span class="comment">Implemented in the Memory Controller (MC)</span></p>
+            <p class="fragment fade-in">IOMMU for all "non-CPU" bus masters</p>
+            <p class="fragment fade-in"><span class="comment">Every bus master has an ASID, each ASID has a pagetable</span></p>
+            <p class="fragment fade-in">Kernel maintains pagetable</p>
+            <p class="fragment fade-in"><span class="comment">Enforces (DMA access ⊆ process heap)</span></p>
+          </ul>
+        </section>
+
+	<section>
+          <h3>How to bypass the SMMU</h3>
+          <ol>
+            <li class="fragment fade-in comment">Open the official datasheet</li>
+            <li class="fragment fade-in comment">Search for "bypass the SMMU":</li>
+            <span class="fragment fade-in"><img src="img/gmmu.jpg" /></span>
+          </ol>
+        </section>
+
+	<section>
+          <img src="img/linus.jpg" />
+        </section>
+
+	<section>
+          <h4>GMMU attack</h4>
+          <ul>
+            <p class="fragment fade-in">GPU can bypass the SMMU</p>
+            <p class="fragment fade-in comment">GMMU entry that has set <font color="yellow">bit 31 will bypass translation</font></p>
+            <p class="fragment fade-in">In hardware, unfixable</p>
+            <p class="fragment fade-in comment">Kernel cannot enforce process isolation for the GPU driver</p>
+            <p class="fragment fade-in comment"><font color="yellow">Nvidia thank you!</font></p>
+          </ul>
+        </section>
+
+	<section>
+          <h3>mchammer <span class="fixed">[Fixed in 2.0.0]</span></h3>
+
+          <p class="fragment fade-in">Or we bypass SMMU another way...</p>
+          <p class="fragment fade-in"><span class="comment">Loader trusts permissions that are given from FS</span></p>
+          <p class="fragment fade-in">Ask for permission to memory controller IO</p>
+          <p class="fragment fade-in"><span class="comment">and <font color="yellow">disable SMMU</font>:</span></p>
+          <pre><code class="hljs" data-trim>uint32_t* g_McPtr32;
+// Get ASLR'd pointer to IO region.
+svcQueryIoMapping(&g_McPtr32, 0x70019000, 0x1000);
+// Assign ASID 0 to the device.
+g_McPtr32[0xABC/4] = 0;</pre></code>
+        </section>
+
+	<section>
+          <h3>mchammer <span class="fixed">[Fixed in 2.0.0]</span></h3>
+
+          <p class="fragment fade-in">We can DMA all over entire DRAM.</p>
+          <p class="fragment fade-in"><span class="comment">Just DMA all over kernel...?</span></p>
+          <p class="fragment fade-in"><span class="comment"><font color="red">No :(</font></span></p>
+          <p class="fragment fade-in"><span class="comment">Kernel is protected by extra DMA carveout</span></p>
+        </section>
+
+	<section>
+          <h3>mchammer <span class="fixed">[Fixed in 2.0.0]</span></h3>
+
+          <p class="fragment fade-in"><span class="comment">But when we look at KProcessHandleTable::SetSize:</span></p>
+          <pre><code class="hljs" data-trim>if (handle_table_size > 40) {
+    m_HandleTable = KPool::Allocate(...);
+}
+else {
+    m_HandleTable = &m_SmallInternalTable[0];
+}</pre></code>
+
+          <p class="fragment fade-in"><span class="comment">If more than 40 handles, the handle table is allocated in the pool.</span></p>
+          <p class="comment fragment fade-in"><font color="yellow">Pool is <b>not</b> protected by carveout.</font></p>
+        </section>
+
+	<section>
+          <h3>mchammer <span class="fixed">[Fixed in 2.0.0]</span></h3>
+          <p class="fragment fade-in">Create a fake KSharedMemory</p>
+          <p class="fragment fade-in"><span class="comment">... with <code>share_addr == kernel_addr</code></span></p>
+          <p class="fragment fade-in">Inject it into the handle table</p>
+          <p class="fragment fade-in"><span class="comment">... and map it using svcMapSharedMemory() syscall</span></p>
+          <p class="fragment fade-in comment"><font color="yellow">Kernel pwned</font></p>
+        </section>
+
+	<section>
+          <h3>mchammer <span class="fixed">[Fixed in 2.0.0]</span></h3>
+          <pre><code class="hljs" style="font-size: 10pt" data-trim>// Construct a fake KMemoryBlock encompassing kernel.
+KMemoryBlock* fake_blk = (KMemoryBlock*) &g_dram_ptr[0x300];
+fake_blk->BasePtr = DRAM_KERNELADDR(0x800A0000ull); // <-- Kernel base address
+fake_blk->Size = KERNEL_SIZE/0x1000;
+// Construct a fake KMemoryBlockEntry referencing above block.
+KMemoryBlockEntry* fake_entry = (KMemoryBlockEntry*) &g_dram_ptr[0x200];
+fake_entry->BlockPtr = DRAM_KERNELADDR(0x80000300ull);
+// Construct a fake KSharedMemory object with above block list.
+KSharedMemory* fake_shmem_obj = (KSharedMemory*) &g_dram_ptr[0x100];
+fake_shmem_obj->VtablePtr = SHAREDMEMORY_VTABLE;
+fake_shmem_obj->RefCount = 100;
+fake_shmem_obj->Blocks_EntryPtrNext = DRAM_KERNELADDR(0x80000200);
+fake_shmem_obj->RemotePerm = PERM_RW;</pre></code>
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>Security model</h3>
+
+          <table>
+            <tr>
+              <td colspan="6"><font color="#ff0000">TrustZone</font> <span class="comment">crypto</span></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td colspan="6"><font color="#ff6100">Kernel</font> <span class="comment">process isolation, IOMMU</span></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td><font color="#ffae00">fs</font></td>
+              <td><font color="#ffae00">ncm</font></td>
+              <td><font color="#ffae00">sm</font></td>
+              <td><font color="#ffae00">pm</font></td>
+              <td><font color="#ffae00">ldr</font></td>
+              <td><font color="#ffae00">spl</font></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td colspan="5"><font color="#ffdd00">Microservices <span class="comment">least privilege</span></font></td>
+              <td style="background-color: #040"><font color="#ffdd00">ns</font></td>
+            </tr>
+            <tr>
+              <td colspan="6" style="background-color: #040"><font color="#00ff00">Game/Application <span class="comment">untrusted</span></font></td>
+            </tr>
+          </table>
+        </section>
+
+	<section>
+	  <h3><img style="background: white;" src="img/tz_logo.png" /></h3>
+	  <p class="fragment fade-in"><span class="comment">And why we can largely ignore it</span></p>
+	  <p class="fragment fade-in">The ARMv8 supports TZ</p>
+	  <p class="fragment fade-in"><span class="comment">Code running under secure EL3 called <i>SecureMonitor</i></span></p>
+	  <p class="fragment fade-in"><font color="yellow">In reality it monitors nothing though</font></p>
+	</section>
+	<section>
+	  <h3>SecureMonitor</h3>
+	  <p class="fragment fade-in comment">It is the first code that runs on the main CPU</p>
+	  <p class="fragment fade-in">Tasks</p>
+	  <ul class="comment">
+	    <li class="fragment fade-in">Booting the Horizon kernel</li>
+	    <li class="fragment fade-in">Cryptography (via Tegra SE)</li>
+	    <li class="fragment fade-in">Starting/stopping CPU cores</li>
+	    <li class="fragment fade-in">Sleep mode</li>
+	  </ul>
+	  <p class="fragment fade-in">Thus not important for homebrew</p>
+	</section>
+	<section>
+	  <h3>Interlude: Tegra SE</h3>
+	  <p class="fragment fade-in">Hardware crypto engine for <font color="red">AES, SHA, RSA, RNG</font></p>
+	  <p class="fragment fade-in comment">Keyslot concept: 16 for AES, 2 for RSA</p>
+	  <p class="fragment fade-in comment">Keyslots can be locked individually</p>
+	  <p class="fragment fade-in comment">Crypto operations on: input/output registers, keyslots, memory (via DMA) </p>
+	</section>
+	<section>
+	  <h3>Cryptography</h3>
+	  <img src="img/tz_crypto.svg" style="padding: 10px 10px 10px 10px;" />
+	</section>
+	<section>
+	  <h3>Sleep mode</h3>
+	  <img src="./img/oyasumi.png" />
+	  <p class="fragment fade-in">Power management controller (PMC) controls sleep/wake transition</p>
+	  <p class="fragment fade-in"><span class="comment">On system sleep the entire SoC is powered down...</span></p>
+	  <p class="fragment fade-in"><span class="comment">...except PMC, DRAM is put into self-refresh mode</span></p>
+	</section>
+	<section>
+	  <h3>Sleep mode</h3>
+	  <p class="fragment fade-in">The SecureMonitor</p>
+	  <list class="comment">
+	    <li class="fragment fade-in">spills TZRAM to <font color="red">external DRAM</font>...</li>
+	    <li class="fragment fade-in">...but encrypted</li>
+	    <li class="fragment fade-in">authenticates TZRAM to PMC</li>
+	    <li class="fragment fade-in">tells SE to save its context to DRAM</li>
+	    <li class="fragment fade-in">signals the ARM7 to put the SoC into <i>LP0</i></li>
+	  </list>
+	</section>
+	<section>
+	  <h3>Waking up</h3>
+	  <img src="./img/ohayo.png" />
+	  <p class="fragment fade-in">The bootrom</p>
+	  <list class="comment">
+	    <li class="fragment fade-in">restores the SE state from DRAM</li>
+	    <li class="fragment fade-in">passes ARM7 code execution to signed <i>warmboot.bin</i></li>
+	  </list>
+	  <p class="fragment fade-in">Warmboot</p>
+	  <list class="comment">
+	    <li class="fragment fade-in">decrypts + verifies the saved SecureMonitor from DRAM to TZRAM</li>
+	    <li class="fragment fade-in">tells the ARMv8 to resume SecureMonitor</li>
+	  </list>
+	</section>
+	<section>
+	  <h3>UntrustZone</h3>
+	  <p class="fragment fade-in">Kernel happily maps <font color="red">lower DRAM, PMC, etc.</font></p>
+	  <p class="fragment fade-in"><span class="comment">But these are <b>crucial</b> in the wakeup process</span></p>
+	  <p class="fragment fade-in"><span class="comment">Poke them a bit and...</span></p>
+	  <p class="fragment fade-in"><font color="yellow">Gain secure EL3 code execution, from usermode</font></p>
+        </section>
+
+	<section data-transition="fade-in fade-out">
+          <h3>Security model</h3>
+
+          <table>
+            <tr style="background-color: #040">
+              <td colspan="6"><font color="#ff0000">TrustZone</font> <span class="comment">crypto</span></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td colspan="6"><font color="#ff6100">Kernel</font> <span class="comment">process isolation, IOMMU</span></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td><font color="#ffae00">fs</font></td>
+              <td><font color="#ffae00">ncm</font></td>
+              <td><font color="#ffae00">sm</font></td>
+              <td><font color="#ffae00">pm</font></td>
+              <td><font color="#ffae00">ldr</font></td>
+              <td><font color="#ffae00">spl</font></td>
+            </tr>
+            <tr style="background-color: #040">
+              <td colspan="5"><font color="#ffdd00">Microservices <span class="comment">least privilege</span></font></td>
+              <td style="background-color: #040"><font color="#ffdd00">ns</font></td>
+            </tr>
+            <tr>
+              <td colspan="6" style="background-color: #040"><font color="#00ff00">Game/Application <span class="comment">untrusted</span></font></td>
+            </tr>
+          </table>
+        </section>
+
+	<section>
+          <h3>nxdbg</h3>
+          <img src="img/nxdbg.jpeg" />
+          <p class="comment"><a href="https://github.com/switchbrew/nxdbg">https://github.com/switchbrew/nxdbg</a></p>
+        </section>
+
+	<section>
+          <h3>libnx</h3>
+          <ul>
+            <p class="fragment fade-in">Kernel primitives <span class="comment">Mutexes, Threads, IPC</span></p>
+            <p class="fragment fade-in">Fully working</p>
+            <p class="fragment fade-in comment">Network, Filesystem, USB, Controller inputs</p>
+            <p class="fragment fade-in">Framebuffer</p>
+          </ul>
+          <p class="comment"><a href="https://github.com/switchbrew/libnx">https://github.com/switchbrew/libnx</a></p>
+        </section>
+
+	<section>
+          <h3>libnx</h3>
+          <ul>
+            <p class="fragment fade-in">Reversing proprietary code is <i>fun</i></p>
+            <p class="fragment fade-in">Homebrew is <i>fun</i></p>
+            <p class="fragment fade-in">Where we need help</p>
+            <p class="fragment fade-in comment">GPU acceleration (NVN reimplementation?)</p>
+            <p class="fragment fade-in comment">Audio support</p>
+            <p class="fragment fade-in comment">Make your own games!!!</p>
+          </ul>
+        </section>
+
+	<section>
+          <p class="fragment fade-in">There will be homebrew.</p>
+          <p class="fragment fade-in"><i>Soon.</i></p>
+          <p class="fragment fade-in comment">In collaboration with team Reswitched</p>
+          <p class="fragment fade-in comment"><font color="yellow">Get on 3.0.0</font></p>
+          <p class="fragment fade-in comment"><font color="yellow">Stay on 3.0.0</font></p>
+	</section>
+
+	<section>
+          <h4>Thanks</h4>
+          <p class="comment"></p>
+          <ul>
+            <p class="comment" style="color: #ddd;">Thanks to:</p>
+            <a class="comment" href="https://twitter.com/ylws8">@ylws8</a>
+            <p class="comment" style="color: #ddd;">
+              <b>SciresM, hexkyz</b>, andeor, thexyz, WntrMute, team Reswitched, mission20000, shinyquag, fincs, shofel2, nedwill, smea ...</p>
+            <p class="comment" style="color: #ddd;">Nvidia</p>
+            <p class="comment" style="color: #ddd;">Nintendo 💕</p>
+          </ul>
+          <p class="comment"><a href="http://switchbrew.org/">http://switchbrew.org/</a></p>
+          <p class="comment">#switchdev @ EFNet</p>
+        </section>
+      </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+      // More info about config & dependencies:
+      // - https://github.com/hakimel/reveal.js#configuration
+      // - https://github.com/hakimel/reveal.js#dependencies
+      Reveal.initialize({
+      dependencies: [
+      { src: 'plugin/markdown/marked.js' },
+      { src: 'plugin/markdown/markdown.js' },
+      { src: 'plugin/notes/notes.js', async: true },
+      { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+      ]
+      });
+    </script>
+  </body>
+</html>
